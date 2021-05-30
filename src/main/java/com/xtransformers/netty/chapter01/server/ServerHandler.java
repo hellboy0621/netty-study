@@ -1,4 +1,4 @@
-package com.xtransformers.netty.chapter01;
+package com.xtransformers.netty.chapter01.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
