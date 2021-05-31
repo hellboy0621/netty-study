@@ -1,11 +1,11 @@
 package com.xtransformers.netty.chapter01.server;
 
-import io.netty.buffer.ByteBuf;
+import com.alibaba.fastjson.JSONObject;
+import com.xtransformers.netty.chapter01.multithread.RequestFuture;
+import com.xtransformers.netty.chapter01.multithread.Response;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-
-import java.nio.charset.Charset;
 
 /**
  * 注解 @ChannelHandler.Sharable 表示此 Handler 对所有 Channel 共享，无状态，注意多线程并发
@@ -24,9 +24,19 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof ByteBuf) {
-            System.out.println(((ByteBuf) msg).toString(Charset.defaultCharset()));
-        }
-        ctx.channel().writeAndFlush("msg has recived!");
+//        if (msg instanceof ByteBuf) {
+//            System.out.println(((ByteBuf) msg).toString(Charset.defaultCharset()));
+//        }
+//        ctx.channel().writeAndFlush("msg has recived!");
+        RequestFuture request = JSONObject.parseObject(msg.toString(), RequestFuture.class);
+        long id = request.getId();
+        System.out.println("request : " + msg);
+
+        // 构建响应结果
+        Response response = new Response();
+        response.setId(id);
+        response.setResult("server response ok.");
+        // 把响应结果返回客户端
+        ctx.channel().writeAndFlush(JSONObject.toJSONString(response));
     }
 }
