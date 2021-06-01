@@ -24,10 +24,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-//        if (msg instanceof ByteBuf) {
-//            System.out.println(((ByteBuf) msg).toString(Charset.defaultCharset()));
-//        }
-//        ctx.channel().writeAndFlush("msg has recived!");
         RequestFuture request = JSONObject.parseObject(msg.toString(), RequestFuture.class);
         long id = request.getId();
         System.out.println("request : " + msg);

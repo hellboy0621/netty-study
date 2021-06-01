@@ -3,6 +3,7 @@ package com.xtransformers.netty.chapter01.multithread;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author daniel
@@ -12,10 +13,17 @@ public class RequestFuture {
 
     public static Map<Long, RequestFuture> futures = new ConcurrentHashMap<>();
 
+    public static final AtomicLong aid = new AtomicLong();
+
     private long id;
     private Object request;
     private Object result;
     private long timeout = 3000;
+
+    public RequestFuture() {
+        id = aid.getAndIncrement();
+        addFuture(this);
+    }
 
     /**
      * 把请求放入缓存

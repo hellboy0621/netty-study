@@ -1,10 +1,10 @@
 package com.xtransformers.netty.chapter01.client;
 
 import com.alibaba.fastjson.JSONObject;
+import com.xtransformers.netty.chapter01.multithread.RequestFuture;
 import com.xtransformers.netty.chapter01.multithread.Response;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.concurrent.Promise;
 
 /**
  * @author daniel
@@ -12,19 +12,10 @@ import io.netty.util.concurrent.Promise;
  */
 public class ClientHandler extends ChannelInboundHandlerAdapter {
 
-    private Promise<Response> promise;
-
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        // 由于经过了 StringDecoder 解码器，所以 msg 为 String 类型
         Response response = JSONObject.parseObject(msg.toString(), Response.class);
-        promise.setSuccess(response);
-    }
-
-    public Promise<Response> getPromise() {
-        return promise;
-    }
-
-    public void setPromise(Promise<Response> promise) {
-        this.promise = promise;
+        RequestFuture.received(response);
     }
 }

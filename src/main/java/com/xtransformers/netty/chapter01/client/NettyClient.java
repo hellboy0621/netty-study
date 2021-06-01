@@ -1,8 +1,7 @@
 package com.xtransformers.netty.chapter01.client;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSON;
 import com.xtransformers.netty.chapter01.multithread.RequestFuture;
-import com.xtransformers.netty.chapter01.multithread.Response;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -15,11 +14,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.Promise;
 
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutionException;
 
 /**
  * @author daniel
@@ -28,40 +24,59 @@ import java.util.concurrent.ExecutionException;
 public class NettyClient {
     public static EventLoopGroup group;
     public static Bootstrap bootstrap;
+    private static ChannelFuture future;
 
     static {
         bootstrap = new Bootstrap();
         group = new NioEventLoopGroup();
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.group(group);
+        // 设置内存分配器
         bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-    }
-
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
-        // 创建一个 primise 对象
-        Promise<Response> promise = new DefaultPromise<>(group.next());
         final ClientHandler handler = new ClientHandler();
-        handler.setPromise(promise);
+        // 把 handler 加入管道中
         bootstrap.handler(new ChannelInitializer<NioSocketChannel>() {
             @Override
             protected void initChannel(NioSocketChannel ch) {
-                ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+                ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,
+                        0, 4, 0, 4));
+                // 把接收到的 ByteBuf 数据包转换成 String
                 ch.pipeline().addLast(new StringDecoder());
+                // 业务逻辑处理 handler
                 ch.pipeline().addLast(handler);
                 ch.pipeline().addLast(new LengthFieldPrepender(4, false));
+                // 把字符串消息转换成 ByteBuf
                 ch.pipeline().addLast(new StringEncoder(StandardCharsets.UTF_8));
             }
         });
 
         // 连接服务器
-        ChannelFuture future = bootstrap.connect("127.0.0.1", 8080).sync();
-        RequestFuture request = new RequestFuture();
-        request.setId(1);
-        request.setRequest("Hello World!");
-        String requestStr = JSONObject.toJSONString(request);
-        future.channel().writeAndFlush(requestStr);
+        try {
+            future = bootstrap.connect("127.0.0.1", 8080).sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
-        Response response = promise.get();
-        System.out.println(JSONObject.toJSONString(response));
+    public Object sendRequest(Object msg) {
+        try {
+            RequestFuture request = new RequestFuture();
+            request.setRequest(msg);
+            String requestStr = JSON.toJSONString(request);
+            future.channel().writeAndFlush(requestStr);
+            Object result = request.get();
+            return result;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    public static void main(String[] args) {
+        NettyClient client = new NettyClient();
+        for (int i = 0; i < 10; i++) {
+            Object result = client.sendRequest("Hello:" + i);
+            System.out.println(result);
+        }
     }
 }
